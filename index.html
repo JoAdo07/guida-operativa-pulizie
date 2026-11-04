@@ -454,6 +454,11 @@
     .vp-meta{display:none}
     .voice-btn{font-size:10px}
   }
+  @supports (-webkit-touch-callout: none){
+    @media (max-width:600px){
+      .voice-player{bottom:calc(62px + env(safe-area-inset-bottom, 0px))}
+    }
+  }
   @media (max-width:480px){
     .brand-sub,.brand-sep{display:none}
     .icon-btn .btn-label{display:none}
