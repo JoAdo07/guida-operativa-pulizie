@@ -274,7 +274,7 @@ function taskHTML(t) {
   return `
     <div class="task" data-id="${t.id}">
       <div class="task-top">
-        <span class="tag"><svg><use href="#i-spark"/></svg>${esc(sec.short)}</span>
+        <span class="tag"><svg><use href="#i-spark"/></svg>Dal vocale</span>
         ${play}
         <span style="flex:1"></span>
         <button class="t-photo" type="button" data-tphoto="${t.id}"><svg><use href="#i-cam"/></svg>Foto</button>
