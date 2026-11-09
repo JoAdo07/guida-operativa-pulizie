@@ -450,6 +450,8 @@ function timeRange(text) {
 }
 
 function placeOf(text) {
+  const named = text.match(/ufficio (?:di|del|della|dello|dei|degli)\s*([a-zà-ù]+)/i);
+  if (named) return { idx: -1, title: 'Ufficio ' + cap(named[1]), img: 'ufficio' };
   let best = null;
   for (const [re, titleFn, img] of PLACES) {
     const m = text.match(re);
