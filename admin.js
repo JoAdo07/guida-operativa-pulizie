@@ -682,7 +682,7 @@ function planURL() {
   if (!S.plan) return '';
   if (!S.planURL) {
     const code = LZString.compressToEncodedURIComponent(JSON.stringify(S.plan));
-    S.planURL = new URL('index.html', location.href).href + '#d=' + code;
+    S.planURL = new URL('index.html?v=2', location.href).href + '#d=' + code;
   }
   return S.planURL;
 }
