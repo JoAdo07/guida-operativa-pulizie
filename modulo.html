@@ -9,8 +9,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="modulo.css?v=3">
-<link rel="stylesheet" href="admin.css?v=3">
+<link rel="stylesheet" href="modulo.css?v=4">
+<link rel="stylesheet" href="admin.css?v=4">
 </head>
 <body>
 <a class="skip" href="#app">Vai all'area responsabili</a>
@@ -43,12 +43,12 @@
 
 <header class="topbar">
   <div class="wrap topbar-in">
-    <a class="brand" href="index.html?v=3" aria-label="Global Behring — Guida operativa">
+    <a class="brand" href="index.html?v=4" aria-label="Global Behring — Guida operativa">
       <span class="logo" aria-hidden="true"><svg><use href="#i-spark"/></svg></span>
       <span>Global Behring <span class="brand-sep">/</span> <span class="brand-sub">Area responsabili</span></span>
     </a>
     <div class="top-actions">
-      <a class="navlink" href="index.html?v=3" aria-label="Guida dipendente" title="Guida dipendente"><svg><use href="#i-file"/></svg><span class="lbl">Guida dipendente</span></a>
+      <a class="navlink" href="index.html?v=4" aria-label="Guida dipendente" title="Guida dipendente"><svg><use href="#i-file"/></svg><span class="lbl">Guida dipendente</span></a>
       <button class="navlink" id="logoutBtn" type="button" aria-label="Esci" title="Esci" hidden><svg><use href="#i-arrow"/></svg><span class="lbl">Esci</span></button>
     </div>
   </div>
@@ -161,11 +161,12 @@
     <details class="transcript" id="trDetails" hidden>
       <summary><svg><use href="#i-chevron"/></svg> Trascrizione completa <span id="trCount" style="color:var(--muted-2);font-weight:400"></span></summary>
       <div class="tr-body" id="trBody"></div>
+      <button class="btn ghost sm" id="editTr" type="button" style="margin-top:10px"><svg><use href="#i-file"/></svg> Modifica il testo</button>
     </details>
 
     <footer class="foot">
       <span>Global Behring · area responsabili</span>
-      <span><a href="index.html?v=3">Guida dipendente</a> · archivio locale</span>
+      <span><a href="index.html?v=4">Guida dipendente</a> · archivio locale</span>
     </footer>
   </div>
 </main>
@@ -204,9 +205,24 @@
   </div>
 </dialog>
 
+<dialog id="editDlg">
+  <div class="dlg">
+    <div class="dlg-head">
+      <span class="dlg-ic"><svg><use href="#i-file"/></svg></span>
+      <div><h3>Correggi la trascrizione</h3><p>Sistema nomi e parole storte: la guida si rifà subito con il testo corretto.</p></div>
+      <button class="dlg-x" type="button" data-close><svg><use href="#i-x"/></svg></button>
+    </div>
+    <div class="dlg-body"><textarea id="editText" class="ta" style="margin:0;min-height:220px"></textarea></div>
+    <div class="dlg-foot">
+      <button class="btn ghost" type="button" data-close>Annulla</button>
+      <button class="btn" id="editOk" type="button"><svg><use href="#i-spark"/></svg> Rifai la guida</button>
+    </div>
+  </div>
+</dialog>
+
 <div id="toasts" aria-live="polite"></div>
 
-<script src="lz.js?v=3"></script>
-<script src="admin.js?v=3"></script>
+<script src="lz.js?v=4"></script>
+<script src="admin.js?v=4"></script>
 </body>
 </html>

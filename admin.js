@@ -594,7 +594,7 @@ function actsOf(text) {
   for (const [label, re] of ACTS) if (re.test(text) && !out.includes(label)) out.push(label);
   if (!out.length) {
     const n = norm(text);
-    if (/pulir|pulizia/.test(n)) out.push('Pulizia');
+    if (/pulir|pulisc|pulit|pulizia/.test(n)) out.push('Pulizia');
     else if (/lavagg/.test(n)) out.push('Lavaggio');
     else if (/controll/.test(n)) out.push('Controllo');
     else out.push('Completato');
@@ -797,7 +797,7 @@ function encodePlan(plan) {
 }
 
 function urlForPlan(plan) {
-  return new URL('./?v=3', location.href).href + '#d=' + encodePlan(plan);
+  return new URL('./?v=4', location.href).href + '#d=' + encodePlan(plan);
 }
 
 function planURL() {
@@ -883,6 +883,29 @@ function previewGuide() {
   openGuide();
 }
 
+function openEdit() {
+  if (!S.transcript) { toast('Prima trascrivi o incolla un vocale.', true); return; }
+  $('#editText').value = S.transcript;
+  $('#editDlg').showModal();
+  setTimeout(() => $('#editText').focus(), 80);
+}
+
+function applyEdit() {
+  const t = $('#editText').value.trim();
+  if (t.length < 30) { toast('Il testo è troppo corto.', true); return; }
+  const fixed = fixText(t);
+  const plan = buildPlan(fixed, { site: S.site, referente: S.referente, owner: S.owner, updated: itDate(todayISO()) });
+  if (!plan) { toast('Non ho riconosciuto attività nel testo corretto.', true); return; }
+  S.transcript = fixed;
+  S.chunks = [{ text: fixed, start: 0, end: 0 }];
+  S.plan = plan;
+  S.planURL = ''; S.shortURL = ''; S.status = 'done';
+  $('#editDlg').close();
+  renderTranscript();
+  renderPlan(plan);
+  toast('Guida aggiornata');
+}
+
 function bindResult() {
   $('#shareBtn').addEventListener('click', openShare);
   $('#copyLink').addEventListener('click', () => {
@@ -919,6 +942,8 @@ function bindResult() {
     try { await copyText(ta.value); toast('Link copiato'); } catch (e) { document.execCommand('copy'); toast('Link copiato'); }
   });
   $('#sharePreview').addEventListener('click', () => window.open($('#shareUrl').value, '_blank'));
+  $('#editTr').addEventListener('click', openEdit);
+  $('#editOk').addEventListener('click', applyEdit);
   $('#shareWa').addEventListener('click', () => {
     window.open('https://wa.me/?text=' + encodeURIComponent('Ciao, ecco la guida di oggi: ' + $('#shareUrl').value), '_blank');
   });
