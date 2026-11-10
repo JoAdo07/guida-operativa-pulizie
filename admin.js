@@ -15,6 +15,116 @@ const todayISO = () => { const d = new Date(); return d.getFullYear() + '-' + pa
 const itDate = iso => { if (!iso) return ''; const p = String(iso).split('-'); return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : iso; };
 const cap = s => { s = String(s || '').trim(); return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; };
 
+/* ============================================================
+   Correzione delle parole storte della trascrizione
+   (es. colidoglio → corridoio, menza → mensa, riugnioni → riunioni)
+   ============================================================ */
+
+const FIX_PHRASES = [
+  [/\bsu\s+ottenut[oi]\b/gi, 'svuotamento'],
+  [/\bsu\s+otteng?o\b/gi, 'svuoto'],
+  [/\bsu\s+ottiene\b/gi, 'svuota'],
+  [/\bcolidoglio\b/gi, 'corridoio'],
+  [/\bcolidoglia\b/gi, 'corridoio'],
+  [/\bcorridoglio\b/gi, 'corridoio'],
+  [/\bmenza\b/gi, 'mensa'],
+  [/\briugnioni\b/gi, 'riunioni'],
+  [/\briugnione\b/gi, 'riunione'],
+  [/\boffici\b/gi, 'uffici'],
+  [/\bofficio\b/gi, 'ufficio'],
+  [/\bspoiatoi\b/gi, 'spogliatoi'],
+  [/\bspoiatoio\b/gi, 'spogliatoio'],
+  [/\bmagazino\b/gi, 'magazzino'],
+  [/\ble\s+polvere\b/gi, 'le polveri'],
+  [/\bi\s+cestino\b/gi, 'i cestini'],
+  [/\bla\s+spazzature\b/gi, 'la spazzatura']
+];
+
+const VOCAB = ('corridoio corridoi mensa mense riunione riunioni ufficio uffici bagno bagni ' +
+  'spogliatoio spogliatoi magazzino magazzini laboratorio laboratori infermeria ascensore ascensori ' +
+  'scala scale reception portineria ingresso atrio cortile parcheggio esterni capannone sanitari ' +
+  'piastrelle pavimento pavimenti scopatura spolvero polvere polveri svuotamento cestino cestini ' +
+  'lavaggio macchinetta caffè caffe detersivo detersivi ecolabel dispenser badge allarme chiave ' +
+  'chiavi guanti mascherina lavasciuga carrello mocio aspirapolvere secchio ripostiglio armadietto ' +
+  'armadietti corrimano vetro vetri ragnatela ragnatele tavolo tavoli sedia sedie microonde ' +
+  'spazzatura rifiuti immondizia differenziata carta plastica organico umido').split(' ');
+
+const KEEP = new Set((VOCAB.join(' ') + ' ' +
+  'il lo la i gli le un uno una di a da in con su per tra fra e ed o od ma se che chi cui non ' +
+  'più anche come dove quando perché cosa quale quali quanto quanti quanta quante questo questa ' +
+  'questi queste quello quella quelli quelle suo sua suoi sue nostro nostra vostri vostre loro ' +
+  'ogni tutti tutte tutto tutta qualche alcuno alcuna alcuni alcune molto molta molti molte poco ' +
+  'poca pochi poche solo sempre mai già ancora appena proprio davvero forse quasi circa adesso ' +
+  'ora oggi ieri domani stamattina stasera mattina pomeriggio sera notte giorno giorni settimana ' +
+  'settimane mese mesi anno anni volta volte minuto minuti ora ore mezzora mezzo mezza primo ' +
+  'secondo terzo quarto piano terra dentro fuori sopra sotto davanti dietro vicino lontano bene ' +
+  'male più meno stesso stessa stessi stesse altro altra altri altre niente nulla qualcosa ' +
+  'qualcuno va vanno sono essere fare fatto mettere portare pulire pulizia pulito controllare ' +
+  'controllo passare passa viene vengono sala sale stanza stanze locale locali area aree zona zone').split(/\s+/));
+
+const WORD_CACHE = new Map();
+const PHON_CACHE = new Map();
+
+function lev(a, b) {
+  const m = a.length, n = b.length;
+  if (!m) return n;
+  if (!n) return m;
+  let prev = Array.from({ length: n + 1 }, (_, j) => j);
+  for (let i = 1; i <= m; i++) {
+    const cur = [i];
+    for (let j = 1; j <= n; j++) {
+      cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    }
+    prev = cur;
+  }
+  return prev[n];
+}
+
+function phon(s) {
+  if (PHON_CACHE.has(s)) return PHON_CACHE.get(s);
+  let x = s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  x = x.replace(/gli/g, 'li').replace(/gn/g, 'ni').replace(/sc/g, 's')
+    .replace(/ch/g, 'c').replace(/gh/g, 'g').replace(/qu/g, 'k').replace(/z/g, 's');
+  x = x.replace(/([bcdfglmnpqrstv])\1/g, '$1').replace(/h/g, '');
+  PHON_CACHE.set(s, x);
+  return x;
+}
+
+function matchCase(orig, repl) {
+  if (orig === orig.toUpperCase()) return repl.toUpperCase();
+  if (/^[A-ZÀ-Þ]/.test(orig)) return repl.charAt(0).toUpperCase() + repl.slice(1);
+  return repl;
+}
+
+function correctWord(word) {
+  const low = word.toLowerCase();
+  if (low.length < 4 || /\d/.test(low) || KEEP.has(low)) return word;
+  if (WORD_CACHE.has(low)) {
+    const hit = WORD_CACHE.get(low);
+    return hit ? matchCase(word, hit) : word;
+  }
+  const p = phon(low);
+  let best = null;
+  for (const cand of VOCAB) {
+    const cp = phon(cand);
+    if (cand[0] !== low[0] && cp[0] !== p[0]) continue;
+    const d = Math.min(lev(low, cand), lev(p, cp) + 0.5);
+    const max = low.length >= 8 ? 3 : low.length >= 6 ? 2 : 1;
+    const sim = 1 - d / Math.max(low.length, cand.length);
+    if (d <= max && sim >= 0.7) {
+      if (!best || d < best.d || (d === best.d && cand.length > best.cand.length)) best = { cand, d };
+    }
+  }
+  WORD_CACHE.set(low, best ? best.cand : '');
+  return best ? matchCase(word, best.cand) : word;
+}
+
+function fixText(text) {
+  let s = String(text || '');
+  for (const [re, rep] of FIX_PHRASES) s = s.replace(re, m => matchCase(m, rep));
+  return s.replace(/[A-Za-zÀ-ÿ]+/g, w => correctWord(w));
+}
+
 const ADMIN_CODE = 'BEHRING2026';
 const MAX_SECONDS = 1800;
 const STORE_PLAN = 'gb-admin-plan-v1';
@@ -31,6 +141,7 @@ const S = {
   transcript: '',
   plan: null,
   planURL: '',
+  shortURL: '',
   site: "Via dell'Industria 11, Castelli Calepio",
   referente: 'Laura San Pellegrino',
   owner: 'Global Behring'
@@ -140,7 +251,7 @@ function onVoiceFile(file) {
   S.url = URL.createObjectURL(file);
   S.duration = 0;
   S.status = 'loaded';
-  S.chunks = []; S.transcript = ''; S.plan = null; S.planURL = '';
+  S.chunks = []; S.transcript = ''; S.plan = null; S.planURL = ''; S.shortURL = '';
 
   $('#upEmpty').hidden = true;
   $('#upFilled').hidden = false;
@@ -320,7 +431,8 @@ async function runAI() {
       }
     });
     S.chunks = chunks;
-    S.transcript = chunks.map(c => c.text).join(' ').replace(/\s+/g, ' ').trim();
+    S.transcript = fixText(chunks.map(c => c.text).join(' ').replace(/\s+/g, ' ').trim());
+    S.chunks = chunks.map(c => ({ ...c, text: fixText(c.text) }));
     renderTranscript();
     const plan = buildPlan(S.transcript, {
       site: S.site, referente: S.referente, owner: S.owner, updated: itDate(todayISO())
@@ -333,7 +445,7 @@ async function runAI() {
     }
     S.status = 'done';
     S.plan = plan;
-    S.planURL = '';
+    S.planURL = ''; S.shortURL = '';
     renderPlan(plan);
     setProg(100, 'Guida pronta');
     updateVoiceUI();
@@ -394,21 +506,21 @@ const PLACES = [
   [/bagno delle donne|bagni delle donne/i, () => 'Bagno donne', 'bagno'],
   [/bagno degli uomini|bagni degli uomini/i, () => 'Bagno uomini', 'bagno'],
   [/\bbagn[oi]\b/i, () => 'Bagni', 'bagno'],
-  [/\bcorridoi?\b/i, () => 'Corridoi', 'corridoio'],
+  [/\bcorridoio?\b/i, () => 'Corridoi', 'corridoio'],
   [/\bmensa\b/i, () => 'Mensa', 'mensa'],
-  [/\bspogliatoi?\b/i, () => 'Spogliatoi', 'spogliatoio'],
+  [/\bspogliatoio?\b/i, () => 'Spogliatoi', 'spogliatoio'],
   [/\bmagazzino\b/i, () => 'Magazzino', 'magazzino'],
   [/\blaboratorio\b/i, () => 'Laboratorio', 'laboratorio'],
   [/\binfermeria\b/i, () => 'Infermeria', 'infermeria'],
   [/sala riunioni|\briunioni\b/i, () => 'Sala riunioni', 'riunioni'],
   [/\breception\b|\bportineria\b/i, () => 'Reception', 'ingresso'],
   [/\batrio\b|\bingresso\b|\bentrata\b/i, () => 'Ingresso', 'ingresso'],
-  [/\bscale?\b/i, () => 'Scale', 'scala'],
+  [/\bscal[ae]\b/i, () => 'Scale', 'scala'],
   [/\bascensore\b/i, () => 'Ascensore', 'ascensore'],
   [/pausa caff|macchinetta|macchina del caff/i, () => 'Pausa caffè', 'caffe'],
   [/\bcapannone\b/i, () => 'Capannone', 'magazzino'],
   [/\bcortile\b|\besterni\b|\bparcheggio\b/i, () => 'Esterni', 'ingresso'],
-  [/\buffici?\b/i, () => 'Uffici', 'ufficio']
+  [/\bufficio\b|\buffici\b/i, () => 'Uffici', 'ufficio']
 ];
 
 function ruleCat(text) {
@@ -534,7 +646,7 @@ function splitText(text) {
 }
 
 function buildPlan(text, meta) {
-  const parts = splitText(text);
+  const parts = splitText(fixText(text));
   if (!parts.length) return null;
 
   const days = {
@@ -678,23 +790,83 @@ function rulePreview(title, arr) {
   return `<div class="rprev"><h4>${esc(title)}</h4>${arr.length ? `<ul>${arr.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : '<div class="empty-r">Nessuna indicazione nel vocale.</div>'}</div>`;
 }
 
+const SHORT_CACHE = new Map();
+
+function encodePlan(plan) {
+  return LZString.compressToEncodedURIComponent(JSON.stringify(plan));
+}
+
+function urlForPlan(plan) {
+  return new URL('./?v=3', location.href).href + '#d=' + encodePlan(plan);
+}
+
 function planURL() {
   if (!S.plan) return '';
-  if (!S.planURL) {
-    const code = LZString.compressToEncodedURIComponent(JSON.stringify(S.plan));
-    S.planURL = new URL('index.html?v=2', location.href).href + '#d=' + code;
-  }
+  if (!S.planURL) S.planURL = urlForPlan(S.plan);
   return S.planURL;
 }
 
-function openShare() {
+function compactPlan(plan, noteLen) {
+  const p = JSON.parse(JSON.stringify(plan));
+  for (const d of p.days || []) for (const s of d.steps || []) if (s.note) s.note = noteLen ? s.note.slice(0, noteLen) : '';
+  for (const s of p.monthly || []) if (s.note) s.note = noteLen ? s.note.slice(0, noteLen) : '';
+  for (const k of ['prodotti', 'chiavi', 'attrezzature']) if (p.rules && Array.isArray(p.rules[k])) p.rules[k] = p.rules[k].slice(0, 8);
+  if (p.meta) delete p.meta.owner;
+  return p;
+}
+
+async function shortenLink(url) {
+  if (!url || url.length > 4990) return '';
+  if (SHORT_CACHE.has(url)) return SHORT_CACHE.get(url);
+  for (const host of ['is.gd', 'v.gd']) {
+    try {
+      const ctrl = new AbortController();
+      const tm = setTimeout(() => ctrl.abort(), 12000);
+      const r = await fetch('https://' + host + '/create.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'format=json&url=' + encodeURIComponent(url),
+        signal: ctrl.signal
+      });
+      clearTimeout(tm);
+      if (!r.ok) continue;
+      const j = await r.json();
+      const s = j && j.shorturl;
+      if (typeof s === 'string' && /^https:\/\/(is|v)\.gd\/[A-Za-z0-9]+$/.test(s)) {
+        SHORT_CACHE.set(url, s);
+        return s;
+      }
+    } catch (e) { }
+  }
+  return '';
+}
+
+async function openShare() {
   if (!S.plan) { toast('Prima elabora un vocale.', true); return; }
-  const url = planURL();
+  let url = planURL();
+  let compacted = false;
+  if (url.length > 4990) {
+    for (const lim of [120, 90, 60, 0]) {
+      const c = urlForPlan(compactPlan(S.plan, lim));
+      if (c.length <= 4990) { url = c; compacted = true; break; }
+    }
+  }
+  S.shortURL = '';
   $('#shareUrl').value = url;
-  const len = url.length;
-  $('#linkLen').textContent = 'Lunghezza link: ' + len.toLocaleString('it-IT') + ' caratteri' + (len > 10000 ? ' · molto lungo' : '');
-  $('#linkLen').classList.toggle('warn', len > 10000);
+  const tooLong = url.length > 4990;
+  $('#linkLen').textContent = tooLong ? 'Link completo · troppo grande per il link corto' : (compacted ? 'Preparo il link corto (citazioni abbreviate)…' : 'Preparo il link corto…');
+  $('#linkLen').classList.toggle('warn', tooLong);
   $('#shareDlg').showModal();
+  if (tooLong) return;
+  const short = await shortenLink(url);
+  if (short) {
+    S.shortURL = short;
+    $('#shareUrl').value = short;
+    $('#linkLen').textContent = 'Link corto · ' + short.length + ' caratteri' + (compacted ? ' · citazioni abbreviate' : '');
+    $('#linkLen').classList.remove('warn');
+  } else {
+    $('#linkLen').textContent = 'Link corto non disponibile · uso il link completo';
+  }
 }
 
 function copyText(text) {
@@ -713,16 +885,15 @@ function previewGuide() {
 
 function bindResult() {
   $('#shareBtn').addEventListener('click', openShare);
-  $('#copyLink').addEventListener('click', async () => {
+  $('#copyLink').addEventListener('click', () => {
     if (!S.plan) { toast('Prima elabora un vocale.', true); return; }
-    try { await copyText(planURL()); toast('Link copiato'); }
-    catch (e) { openShare(); }
+    openShare();
   });
   $('#previewBtn').addEventListener('click', previewGuide);
   $('#openGuide').addEventListener('click', openGuide);
   $('#waLink').addEventListener('click', () => {
     if (!S.plan) { toast('Prima elabora un vocale.', true); return; }
-    window.open('https://wa.me/?text=' + encodeURIComponent('Ciao, ecco la guida di oggi: ' + planURL()), '_blank');
+    openShare();
   });
   $('#downloadPlan').addEventListener('click', () => {
     if (!S.plan) return;
@@ -733,7 +904,7 @@ function bindResult() {
     if (S.plan && !confirm('Vuoi preparare una nuova guida? Il vocale attuale verrà rimosso.')) return;
     if (S.url) URL.revokeObjectURL(S.url);
     S.file = null; S.url = ''; S.name = ''; S.size = 0; S.duration = 0; S.status = 'idle';
-    S.chunks = []; S.transcript = ''; S.plan = null; S.planURL = '';
+    S.chunks = []; S.transcript = ''; S.plan = null; S.planURL = ''; S.shortURL = '';
     try { localStorage.removeItem(STORE_PLAN); } catch (e) { }
     $('#upEmpty').hidden = false; $('#upFilled').hidden = true;
     $('#drop').classList.remove('has-file');
@@ -766,11 +937,12 @@ function bindPaste() {
       site: S.site, referente: S.referente, owner: S.owner, updated: itDate(todayISO())
     });
     if (!plan) { toast('Non ho riconosciuto attività nel testo.', true); return; }
-    S.chunks = [{ text: text, start: 0, end: 0 }];
-    S.transcript = text;
+    const fixed = fixText(text);
+    S.chunks = [{ text: fixed, start: 0, end: 0 }];
+    S.transcript = fixed;
     S.status = 'done';
     S.plan = plan;
-    S.planURL = '';
+    S.planURL = ''; S.shortURL = '';
     $('#pasteDlg').close();
     $('#upEmpty').hidden = true;
     $('#upFilled').hidden = false;
@@ -809,7 +981,7 @@ function bindUpload() {
     if (S.plan && !confirm('Vuoi rimuovere il vocale e la guida preparata?')) return;
     if (S.url) URL.revokeObjectURL(S.url);
     S.file = null; S.url = ''; S.name = ''; S.size = 0; S.duration = 0; S.status = 'idle';
-    S.chunks = []; S.transcript = ''; S.plan = null; S.planURL = '';
+    S.chunks = []; S.transcript = ''; S.plan = null; S.planURL = ''; S.shortURL = '';
     try { localStorage.removeItem(STORE_PLAN); } catch (e) { }
     $('#upEmpty').hidden = false; $('#upFilled').hidden = true;
     $('#drop').classList.remove('has-file');
@@ -837,7 +1009,7 @@ function bindMeta() {
       S.plan.meta.site = S.site;
       S.plan.meta.referente = S.referente;
       S.plan.meta.owner = S.owner;
-      S.planURL = '';
+      S.planURL = ''; S.shortURL = '';
       $('#resultSub').textContent = [S.plan.meta.site, S.plan.meta.referente ? 'referente ' + S.plan.meta.referente : '', S.plan.meta.updated ? 'aggiornata il ' + S.plan.meta.updated : ''].filter(Boolean).join(' · ');
     }
   };
@@ -869,7 +1041,7 @@ function init() {
       const p = JSON.parse(raw);
       if (p && Array.isArray(p.days) && p.days.length) {
         S.plan = p;
-        S.planURL = '';
+        S.planURL = ''; S.shortURL = '';
         renderPlan(p);
       }
     }

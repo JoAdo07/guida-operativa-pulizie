@@ -9,8 +9,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="modulo.css?v=1">
-<link rel="stylesheet" href="admin.css?v=1">
+<link rel="stylesheet" href="modulo.css?v=3">
+<link rel="stylesheet" href="admin.css?v=3">
 </head>
 <body>
 <a class="skip" href="#app">Vai all'area responsabili</a>
@@ -43,12 +43,12 @@
 
 <header class="topbar">
   <div class="wrap topbar-in">
-    <a class="brand" href="index.html?v=2" aria-label="Global Behring — Guida operativa">
+    <a class="brand" href="index.html?v=3" aria-label="Global Behring — Guida operativa">
       <span class="logo" aria-hidden="true"><svg><use href="#i-spark"/></svg></span>
       <span>Global Behring <span class="brand-sep">/</span> <span class="brand-sub">Area responsabili</span></span>
     </a>
     <div class="top-actions">
-      <a class="navlink" href="index.html?v=2" aria-label="Guida dipendente" title="Guida dipendente"><svg><use href="#i-file"/></svg><span class="lbl">Guida dipendente</span></a>
+      <a class="navlink" href="index.html?v=3" aria-label="Guida dipendente" title="Guida dipendente"><svg><use href="#i-file"/></svg><span class="lbl">Guida dipendente</span></a>
       <button class="navlink" id="logoutBtn" type="button" aria-label="Esci" title="Esci" hidden><svg><use href="#i-arrow"/></svg><span class="lbl">Esci</span></button>
     </div>
   </div>
@@ -144,7 +144,7 @@
           </div>
           <div class="result-actions">
             <button class="btn" id="openGuide" type="button"><svg><use href="#i-eye"/></svg> Apri anteprima</button>
-            <button class="btn ghost" id="copyLink" type="button"><svg><use href="#i-link"/></svg> Copia link</button>
+            <button class="btn ghost" id="copyLink" type="button"><svg><use href="#i-link"/></svg> Link corto</button>
             <button class="btn ghost" id="waLink" type="button"><svg><use href="#i-wa"/></svg> WhatsApp</button>
           </div>
         </div>
@@ -165,7 +165,7 @@
 
     <footer class="foot">
       <span>Global Behring · area responsabili</span>
-      <span><a href="index.html?v=2">Guida dipendente</a> · archivio locale</span>
+      <span><a href="index.html?v=3">Guida dipendente</a> · archivio locale</span>
     </footer>
   </div>
 </main>
@@ -180,7 +180,7 @@
     <div class="dlg-body">
       <div class="copybox"><textarea id="shareUrl" readonly></textarea><button class="btn ghost sm" id="copyBtn2" type="button" style="height:auto"><svg><use href="#i-copy"/></svg> Copia</button></div>
       <p class="linklen" id="linkLen">—</p>
-      <p class="mut">Se il link è molto lungo, invialo via email oppure usa l'anteprima dallo stesso telefono.</p>
+      <p class="mut">Il link corto passa dal servizio is.gd: il piano è codificato nel link. Se il servizio non risponde, resta il link completo.</p>
     </div>
     <div class="dlg-foot">
       <button class="btn ghost" id="sharePreview" type="button"><svg><use href="#i-eye"/></svg> Apri anteprima</button>
@@ -206,7 +206,7 @@
 
 <div id="toasts" aria-live="polite"></div>
 
-<script src="lz.js?v=1"></script>
-<script src="admin.js?v=1"></script>
+<script src="lz.js?v=3"></script>
+<script src="admin.js?v=3"></script>
 </body>
 </html>
